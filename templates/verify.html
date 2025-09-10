@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="verify-container">
+    <div class="verify-box">
+        <h1>Verify Serial Number</h1>
+        
+        <form method="POST" class="verify-form">
+            <input type="text" name="serial" value="{{ serial_input }}" 
+                   placeholder="Enter SN-XXXX-XXXX-XXXX" 
+                   class="verify-input">
+            <button type="submit" class="verify-button">Verify Serial</button>
+        </form>
+
+        {% if result %}
+            <div class="result-box {% if result.valid %}result-valid{% else %}result-invalid{% endif %}">
+                {% if result.valid %}
+                    <strong>✅ Valid Serial</strong>
+                    <div class="result-details">
+                        <!-- Serial Number Breakdown -->
+                        <h3>Serial Number Analysis</h3>
+                        <div class="serial-breakdown">
+                            <p><strong>Full Serial:</strong> {{ serial_input }}</p>
+                            <p><strong>Type:</strong> {{ result.type }}</p>
+                            
+                            {% if result.type == 'combined' %}
+                                <p><strong>Groups:</strong> {{ result.groups|join(' - ') }}</p>
+                                <p><strong>Group Count:</strong> {{ result.groups|length }}</p>
+                            {% elif result.type == 'with_checksum' %}
+                                <p><strong>Body:</strong> {{ result.serial_body }}</p>
+                                <p><strong>Checksum:</strong> {{ result.checksum }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Banknote Information (if available) -->
+                        {% if banknote %}
+                            <h3>Banknote Information</h3>
+                            <div class="banknote-info">
+                                <p><strong>Owner:</strong> {{ banknote.user.username }}</p>
+                                <p><strong>Denomination:</strong> {{ banknote.denomination }}</p>
+                                <p><strong>Side:</strong> {{ banknote.side|title }}</p>
+                                <p><strong>Generated:</strong> {{ banknote.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                <p><strong>Status:</strong> <span class="status-{% if banknote.is_public %}public{% else %}private{% endif %}">
+                                    {{ 'Public' if banknote.is_public else 'Private' }}
+                                </span></p>
+                                
+                                {% if banknote.png_path and banknote.is_public %}
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <h4>Banknote Image</h4>
+                                    <img src="{{ url_for('serve_banknote_image', filename=banknote.png_path.replace(IMAGES_ROOT+'/', '')) }}" 
+                                         alt="Banknote" style="max-width: 300px; max-height: 150px; border: 1px solid #333;">
+                                    <div style="margin-top: 10px;">
+                                        <a href="{{ url_for('serve_banknote_image', filename=banknote.png_path.replace(IMAGES_ROOT+'/', '')) }}" 
+                                           download class="download-button">Download PNG</a>
+                                        {% if banknote.pdf_path %}
+                                        <a href="{{ url_for('serve_banknote_image', filename=banknote.pdf_path.replace(IMAGES_ROOT+'/', '')) }}" 
+                                           download class="download-button">Download PDF</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="no-banknote-info">
+                                <p>⚠️ Serial number is valid but no banknote information is available in the database.</p>
+                                <p>This could mean:</p>
+                                <ul>
+                                    <li>The banknote was generated before database tracking was implemented</li>
+                                    <li>The banknote has been deleted or archived</li>
+                                    <li>The serial number format differs from the database records</li>
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <strong>❌ Invalid Serial</strong>
+                    <div class="result-details">
+                        <p><strong>Reason:</strong> {{ result.reason }}</p>
+                        <p><strong>Input:</strong> {{ serial_input }}</p>
+                        
+                        <div class="serial-help">
+                            <h4>Valid Serial Number Format:</h4>
+                            <p>Serial numbers should start with "SN-" followed by alphanumeric groups separated by hyphens.</p>
+                            <p><strong>Examples:</strong></p>
+                            <ul>
+                                <li>SN-ABC123-DEF456</li>
+                                <li>SN-USERNAME-100FRONT</li>
+                                <li>SN-2023-09-15-ABCDEF</li>
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.serial-breakdown {
+    background-color: #222;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.serial-breakdown p {
+    margin: 5px 0;
+    font-family: monospace;
+}
+
+.banknote-info {
+    background-color: #222;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.no-banknote-info {
+    background-color: #322;
+    border: 1px solid #633;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.no-banknote-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.no-banknote-info li {
+    margin: 5px 0;
+}
+
+.serial-help {
+    background-color: #222;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.serial-help ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.serial-help li {
+    font-family: monospace;
+    margin: 5px 0;
+}
+
+.status-public {
+    color: #0f0;
+    font-weight: bold;
+}
+
+.status-private {
+    color: #f00;
+    font-weight: bold;
+}
+
+.download-button {
+    display: inline-block;
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    text-decoration: none;
+    margin: 0 5px;
+    font-size: 0.9em;
+    border: 1px solid #444;
+}
+
+.download-button:hover {
+    background-color: #444;
+}
+</style>
+{% endblock %}
